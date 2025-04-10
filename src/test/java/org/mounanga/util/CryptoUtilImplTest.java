@@ -18,7 +18,7 @@ class CryptoUtilImplTest {
     private KeyPair keyPair;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         cryptoUtil = new CryptoUtilImpl();
         secretKey = cryptoUtil.generateSecretKey();
         keyPair = cryptoUtil.generateKeyPair();

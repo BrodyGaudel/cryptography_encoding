@@ -1,25 +1,32 @@
-Voici un fichier `README.md` pour le projet `CryptoUtil` :
 
-```markdown
-# CryptoUtil
+# CryptoUtil Java Library
 
-CryptoUtil is a Java library providing cryptographic utility methods for encoding, decoding, encryption, decryption, key generation, and signing operations. 
+`CryptoUtil` is a lightweight Java utility library that provides common cryptographic operations such as encoding/decoding, encryption/decryption, key generation, and digital signatures using standard Java APIs. It is designed for easy integration into enterprise or personal applications requiring robust and simple cryptographic support.
+
+---
 
 ## Features
 
-- Base64 encoding/decoding
-- Base64 URL-safe encoding/decoding
-- Hexadecimal encoding
-- AES encryption/decryption
-- RSA encryption/decryption
-- HMAC-SHA256 signing and verification
-- RSA signing and verification
-- Key generation (AES, RSA)
-- Public/Private key extraction from Base64, certificates, and Java KeyStore (JKS)
+- ✅ Base64 and Hex encoding/decoding  
+- 🔐 AES encryption/decryption (symmetric)
+- 🔐 RSA encryption/decryption (asymmetric)
+- 🔑 HMAC signature generation and verification
+- 🔑 RSA digital signature creation and validation
+- 🔑 AES and RSA key pair generation
+
+---
+
+## Requirements
+
+- Java 21+
+- Maven (for dependency management)
+
+---
 
 ## Installation
 
-To use CryptoUtil in your project, add the following dependency to your `pom.xml` file:
+To use `CryptoUtil` in your Maven project, install it locally or deploy it to your repository.  
+(Instructions to publish on Maven Central or GitHub Packages can be added later.)
 
 ```xml
 <dependency>
@@ -29,96 +36,121 @@ To use CryptoUtil in your project, add the following dependency to your `pom.xml
 </dependency>
 ```
 
-Alternatively, you can include the JAR file in your project's classpath.
+---
 
 ## Usage
 
-### Encoding and Decoding
+### 1. Base64 Utilities
 
 ```java
-CryptoUtil cryptoUtil = new CryptoUtilImpl();
-
-String base64Encoded = cryptoUtil.encodeToBase64(data);
-byte[] base64Decoded = cryptoUtil.decodeFromBase64(base64Encoded);
-
-String base64UrlEncoded = cryptoUtil.encodeToBase64Url(data);
-byte[] base64UrlDecoded = cryptoUtil.decodeFromBase64Url(base64UrlEncoded);
-
-String hexEncoded = cryptoUtil.encodeToHex(data);
+String encoded = CryptoUtil.encodeBase64("hello");
+String decoded = CryptoUtil.decodeBase64(encoded);
 ```
 
-### AES Encryption and Decryption
+---
+
+### 2. Hex Utilities
 
 ```java
-SecretKey secretKey = cryptoUtil.generateSecretKey();
-
-String encryptedData = cryptoUtil.encryptAES(data, secretKey);
-byte[] decryptedData = cryptoUtil.decryptAES(encryptedData, secretKey);
+String hex = CryptoUtil.encodeHex("hello");
+String decoded = CryptoUtil.decodeHex(hex);
 ```
 
-### RSA Encryption and Decryption
+---
+
+### 3. AES Encryption/Decryption
 
 ```java
-KeyPair keyPair = cryptoUtil.generateKeyPair();
-PublicKey publicKey = keyPair.getPublic();
-PrivateKey privateKey = keyPair.getPrivate();
+// Generate key and IV
+SecretKey aesKey = CryptoUtil.generateAESKey(256);
+byte[] iv = CryptoUtil.generateIV();
 
-String encryptedData = cryptoUtil.encryptRSA(data, publicKey);
-byte[] decryptedData = cryptoUtil.decryptRSA(encryptedData, privateKey);
+// Encrypt
+byte[] encrypted = CryptoUtil.encryptAES("myData", aesKey, iv);
+
+// Decrypt
+String decrypted = CryptoUtil.decryptAES(encrypted, aesKey, iv);
 ```
 
-### HMAC-SHA256 Signing and Verification
+---
+
+### 4. RSA Encryption/Decryption
 
 ```java
-String signature = cryptoUtil.hmacSign(data, secret);
-boolean isVerified = cryptoUtil.hmacSignVerify(signedDocument, secret);
+// Generate key pair
+KeyPair rsaKeyPair = CryptoUtil.generateRSAKeyPair(2048);
+
+// Encrypt
+byte[] encrypted = CryptoUtil.encryptRSA("mySecret", rsaKeyPair.getPublic());
+
+// Decrypt
+String decrypted = CryptoUtil.decryptRSA(encrypted, rsaKeyPair.getPrivate());
 ```
 
-### RSA Signing and Verification
+---
+
+### 5. HMAC Signatures
 
 ```java
-String signature = cryptoUtil.rsaSign(data, privateKey);
-boolean isVerified = cryptoUtil.rsaSignVerify(signedDocument, publicKey);
+SecretKey key = CryptoUtil.generateHMACKey("HmacSHA256");
+
+// Sign
+byte[] signature = CryptoUtil.signHMAC("data", key, "HmacSHA256");
+
+// Verify
+boolean valid = CryptoUtil.verifyHMAC("data", signature, key, "HmacSHA256");
 ```
+
+---
+
+### 6. RSA Signatures
+
+```java
+KeyPair rsaKeyPair = CryptoUtil.generateRSAKeyPair(2048);
+
+// Sign
+byte[] signature = CryptoUtil.signRSA("message", rsaKeyPair.getPrivate(), "SHA256withRSA");
+
+// Verify
+boolean verified = CryptoUtil.verifyRSA("message", signature, rsaKeyPair.getPublic(), "SHA256withRSA");
+```
+
+---
 
 ## API Reference
 
-### Methods
+### Key Generation
 
-- `String encodeToBase64(byte[] data)`
-- `byte[] decodeFromBase64(String dataBase64)`
-- `String encodeToBase64Url(byte[] data)`
-- `byte[] decodeFromBase64Url(String dataBase64)`
-- `String encodeToHex(byte[] data)`
-- `String encodeToHexNative(byte[] data) throws CryptoUtilException`
-- `SecretKey generateSecretKey() throws CryptoUtilException`
-- `SecretKey generateSecretKey(String secret)`
-- `String encryptAES(byte[] data, SecretKey secretKey) throws CryptoUtilException`
-- `byte[] decryptAES(String encodedEncryptedData, SecretKey secretKey) throws CryptoUtilException`
-- `KeyPair generateKeyPair() throws CryptoUtilException`
-- `PublicKey generatePublicKeyFromBase64(String publicKeyBase64) throws CryptoUtilException`
-- `PrivateKey generatePrivateKeyFromBase64(String publicKeyBase64) throws CryptoUtilException`
-- `String encryptRSA(byte[] data, PublicKey publicKey) throws CryptoUtilException`
-- `byte[] decryptRSA(String dataBase64, PrivateKey privateKey) throws CryptoUtilException`
-- `PublicKey publicKeyFromCertificate(String fileName) throws CryptoUtilException`
-- `PrivateKey privateKeyFromJKS(String fileName, String jksPassword, String alias) throws CryptoUtilException`
-- `String hmacSign(byte[] data, String privateSecret) throws CryptoUtilException`
-- `boolean hmacSignVerify(String signedDocument, String secret) throws CryptoUtilException`
-- `String rsaSign(byte[] data, PrivateKey privateKey) throws CryptoUtilException`
-- `boolean rsaSignVerify(String signedDoc, PublicKey publicKey) throws CryptoUtilException`
+- `generateAESKey(int size)`  
+  Generate an AES key (size: 128, 192, or 256 bits)
+
+- `generateIV()`  
+  Generate a 16-byte Initialization Vector (IV)
+
+- `generateRSAKeyPair(int size)`  
+  Generate an RSA key pair (size: 1024, 2048, 4096)
+
+- `generateHMACKey(String algorithm)`  
+  Generate an HMAC key using the given algorithm (e.g., `"HmacSHA256"`)
+
+---
 
 ## Exception Handling
 
-All methods in CryptoUtil throw `CryptoUtilException` in case of an error. You should handle this exception appropriately in your code.
+All low-level exceptions are wrapped into a `RuntimeException`. It is recommended to handle them at the application level for production usage. A custom `CryptoException` class will be added in future versions for more granular control.
 
-```java
-try {
-    String encryptedData = cryptoUtil.encryptAES(data, secretKey);
-} catch (CryptoUtilException e) {
-    e.printStackTrace();
-}
-```
+---
 
-## Author
+## License
 
-**Brody Gaudel MOUNANGA BOUKA**
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Future Improvements
+
+- Add PEM/DER file support for RSA keys
+- Support for key storage in keystores
+- Better error handling with custom exceptions
+- CLI or GUI integration
+- Publish to Maven Central / GitHub Packages

@@ -8,13 +8,19 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.FileInputStream;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Formatter;
 
@@ -25,7 +31,10 @@ public class CryptoUtilImpl implements CryptoUtil {
     private static final String RSA = "RSA";
     private static final String HMAC_SHA256 = "HmacSHA256";
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
-
+    private static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
+    private static final int GCM_IV_LENGTH = 12; // 96 bits recommandé
+    private static final int GCM_TAG_LENGTH = 128;
+    private static final String TRANSFORMATION = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding";
     public CryptoUtilImpl() {
         super();
     }
@@ -85,24 +94,43 @@ public class CryptoUtilImpl implements CryptoUtil {
 
     @Override
     public String encryptAES(byte[] data, SecretKey secretKey) throws CryptoUtilException {
-        try{
-            Cipher cipher = Cipher.getInstance(AES);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        try {
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            SecureRandom secureRandom = new SecureRandom();
+            secureRandom.nextBytes(iv);
+
+            Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
+
             byte[] encryptedData = cipher.doFinal(data);
-            return Base64.getEncoder().encodeToString(encryptedData);
-        }catch (Exception e){
+            int capacity = iv.length + encryptedData.length;
+            byte[] encryptedWithIv = ByteBuffer.allocate(capacity)
+                    .put(iv)
+                    .put(encryptedData)
+                    .array();
+
+            return Base64.getEncoder().encodeToString(encryptedWithIv);
+        } catch (Exception e) {
             throw new CryptoUtilException(e.getMessage(), e);
         }
     }
 
     @Override
     public byte[] decryptAES(String encodedEncryptedData, SecretKey secretKey) throws CryptoUtilException {
-        try{
-            byte[] decodedEncryptedData = Base64.getDecoder().decode(encodedEncryptedData);
-            Cipher cipher = Cipher.getInstance(AES);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey);
-            return cipher.doFinal(decodedEncryptedData);
-        }catch (Exception e){
+        try {
+            byte[] encryptedWithIv = Base64.getDecoder().decode(encodedEncryptedData);
+
+            byte[] iv = Arrays.copyOfRange(encryptedWithIv, 0, GCM_IV_LENGTH);
+
+            byte[] encryptedData = Arrays.copyOfRange(encryptedWithIv, GCM_IV_LENGTH, encryptedWithIv.length);
+
+            Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
+
+            return cipher.doFinal(encryptedData);
+        } catch (Exception e) {
             throw new CryptoUtilException(e.getMessage(), e);
         }
     }
@@ -142,27 +170,34 @@ public class CryptoUtilImpl implements CryptoUtil {
 
     @Override
     public String encryptRSA(byte[] data, PublicKey publicKey) throws CryptoUtilException {
-        try{
-            Cipher cipher = Cipher.getInstance(RSA);
-            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            byte[] bytes = cipher.doFinal(data);
-            return encodeToBase64(bytes);
-        }catch (Exception e){
+        try {
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            OAEPParameterSpec oaepParams = new OAEPParameterSpec(
+                    "SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT
+            );
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey, oaepParams);
+
+            byte[] encryptedBytes = cipher.doFinal(data);
+            return encodeToBase64(encryptedBytes);
+        } catch (Exception e) {
             throw new CryptoUtilException(e.getMessage(), e);
         }
     }
 
     @Override
     public byte[] decryptRSA(String dataBase64, PrivateKey privateKey) throws CryptoUtilException{
-        try{
-            Cipher cipher = Cipher.getInstance(RSA);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        try {
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            OAEPParameterSpec oaepParams = new OAEPParameterSpec(
+                    "SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT
+            );
+            cipher.init(Cipher.DECRYPT_MODE, privateKey, oaepParams);
+
             byte[] decodedEncryptedData = decodeFromBase64(dataBase64);
             return cipher.doFinal(decodedEncryptedData);
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new CryptoUtilException(e.getMessage(), e);
         }
-
     }
 
     @Override
